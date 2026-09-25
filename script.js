@@ -1,367 +1,356 @@
 let port = null;
-
 let reader = null;
+let writer = null;
 
-let keepReading = false;
-
-
-// Get HTML elements
-
-const connectBtn =
-    document.getElementById("connectBtn");
-
-const disconnectBtn =
-    document.getElementById("disconnectBtn");
-
-const statusText =
-    document.getElementById("statusText");
-
-const statusDot =
-    document.getElementById("statusDot");
+let currentLimit = 29.0;
 
 
-// Change connection status
+// ------------------------------------
+// CONNECT ESP32
+// ------------------------------------
 
-function setStatus(text, connected) {
+document
+    .getElementById("connectButton")
+    .addEventListener("click", connectESP32);
 
-    statusText.textContent = text;
-
-    if (connected) {
-
-        statusDot.style.background = "green";
-
-    } else {
-
-        statusDot.style.background = "red";
-
-    }
-}
-
-
-// Display sensor data
-
-function showData(data) {
-
-    // Temperature
-
-    if (data.temperature === null) {
-
-        document.getElementById(
-            "temperature"
-        ).textContent = "--";
-
-    } else {
-
-        document.getElementById(
-            "temperature"
-        ).textContent =
-            Number(data.temperature).toFixed(1);
-
-    }
-
-
-    // Humidity
-
-    if (data.humidity === null) {
-
-        document.getElementById(
-            "humidity"
-        ).textContent = "--";
-
-    } else {
-
-        document.getElementById(
-            "humidity"
-        ).textContent =
-            Number(data.humidity).toFixed(1);
-
-    }
-
-
-    // Distance
-
-    if (data.distance === null) {
-
-        document.getElementById(
-            "distance"
-        ).textContent = "--";
-
-    } else {
-
-        document.getElementById(
-            "distance"
-        ).textContent =
-            Number(data.distance).toFixed(1);
-
-    }
-
-
-    // Time
-
-    document.getElementById(
-        "lastUpdate"
-    ).textContent =
-        new Date().toLocaleTimeString();
-}
-
-
-// Connect ESP32
 
 async function connectESP32() {
 
-    // Check browser support
-
-    if (!("serial" in navigator)) {
-
-        alert(
-            "Web Serial is not supported. " +
-            "Use Google Chrome or Microsoft Edge."
-        );
-
-        return;
-    }
-
-
     try {
 
-        // Ask user to select COM port
+        // Ask browser for serial port
+        port = await navigator.serial.requestPort();
 
-        port =
-            await navigator.serial.requestPort();
-
-
-        // Open serial connection
-
+        // Open ESP32 serial connection
         await port.open({
             baudRate: 115200
         });
 
+        updateConnection(true);
 
-        keepReading = true;
+        // Create writer
+        writer = port.writable.getWriter();
 
+        // Start reading ESP32 data
+        readSerial();
 
-        connectBtn.disabled = true;
-
-        disconnectBtn.disabled = false;
-
-
-        setStatus(
-            "ESP32 Connected",
-            true
-        );
-
-
-        // Start reading
-
-        readSerialData();
-
-    }
-
-    catch (error) {
+    } catch (error) {
 
         console.error(error);
 
-        setStatus(
-            "Connection failed",
-            false
-        );
-
+        alert("Could not connect to ESP32.");
     }
-
 }
 
 
-// Read ESP32 Serial data
+// ------------------------------------
+// READ SERIAL DATA
+// ------------------------------------
 
-async function readSerialData() {
+async function readSerial() {
 
-    const decoder =
-        new TextDecoderStream();
+    const decoder = new TextDecoder();
 
-
-    const inputDone =
-        port.readable.pipeTo(
-            decoder.writable
-        );
-
-
-    reader =
-        decoder.readable.getReader();
-
+    reader = port.readable.getReader();
 
     let buffer = "";
 
-
     try {
 
-        while (keepReading) {
+        while (true) {
 
-            const {
-                value,
-                done
-            } = await reader.read();
-
+            const { value, done } = await reader.read();
 
             if (done) {
-
                 break;
-
             }
 
+            buffer += decoder.decode(value);
 
-            if (!value) {
+            const lines = buffer.split("\n");
 
-                continue;
+            buffer = lines.pop();
 
+            for (const line of lines) {
+
+                processESP32Data(line.trim());
             }
-
-
-            buffer += value;
-
-
-            const lines =
-                buffer.split("\n");
-
-
-            buffer =
-                lines.pop();
-
-
-            for (let line of lines) {
-
-                line = line.trim();
-
-
-                // Only process JSON
-
-                if (!line.startsWith("{")) {
-
-                    continue;
-
-                }
-
-
-                try {
-
-                    const data =
-                        JSON.parse(line);
-
-
-                    if (
-                        data.temperature !==
-                        undefined
-                    ) {
-
-                        showData(data);
-
-                    }
-
-                }
-
-                catch (error) {
-
-                    console.log(
-                        "Invalid JSON:",
-                        line
-                    );
-
-                }
-
-            }
-
         }
 
-    }
-
-    catch (error) {
+    } catch (error) {
 
         console.error(error);
 
-    }
-
-    finally {
+    } finally {
 
         reader.releaseLock();
+    }
+}
 
-        await inputDone.catch(
-            () => {}
+
+// ------------------------------------
+// PROCESS ESP32 DATA
+// ------------------------------------
+
+function processESP32Data(data) {
+
+    console.log("ESP32:", data);
+
+    /*
+       Example:
+
+       TEMP:28.5,LIMIT:29.0,STATUS:NORMAL
+    */
+
+    if (data.startsWith("TEMP:")) {
+
+        const parts = data.split(",");
+
+        let temperature = null;
+        let limit = null;
+        let status = null;
+
+        for (const part of parts) {
+
+            if (part.startsWith("TEMP:")) {
+
+                temperature =
+                    parseFloat(
+                        part.substring(5)
+                    );
+            }
+
+            if (part.startsWith("LIMIT:")) {
+
+                limit =
+                    parseFloat(
+                        part.substring(6)
+                    );
+            }
+
+            if (part.startsWith("STATUS:")) {
+
+                status =
+                    part.substring(7);
+            }
+        }
+
+        if (temperature !== null) {
+
+            updateTemperature(temperature);
+        }
+
+        if (limit !== null) {
+
+            currentLimit = limit;
+
+            document.getElementById(
+                "limitStatus"
+            ).textContent =
+                "Current limit: " +
+                limit +
+                "°C";
+        }
+
+        if (status === "ALARM") {
+
+            showAlarm();
+
+        } else if (status === "NORMAL") {
+
+            showNormal();
+        }
+    }
+
+    if (data.startsWith("LIMIT_SET:")) {
+
+        const limit =
+            parseFloat(
+                data.substring(10)
+            );
+
+        if (!isNaN(limit)) {
+
+            currentLimit = limit;
+
+            document.getElementById(
+                "limitStatus"
+            ).textContent =
+                "Current limit: " +
+                limit +
+                "°C";
+        }
+    }
+}
+
+
+// ------------------------------------
+// UPDATE TEMPERATURE
+// ------------------------------------
+
+function updateTemperature(value) {
+
+    document.getElementById(
+        "temperature"
+    ).textContent =
+        value.toFixed(1);
+}
+
+
+// ------------------------------------
+// SHOW NORMAL
+// ------------------------------------
+
+function showNormal() {
+
+    const card =
+        document.getElementById("statusCard");
+
+    card.className = "status normal";
+
+    document.getElementById(
+        "statusIcon"
+    ).textContent = "🟢";
+
+    document.getElementById(
+        "statusTitle"
+    ).textContent = "NORMAL";
+
+    document.getElementById(
+        "statusMessage"
+    ).textContent =
+        "Temperature is normal";
+
+    document.getElementById(
+        "buzzerStatus"
+    ).textContent = "OFF";
+}
+
+
+// ------------------------------------
+// SHOW ALARM
+// ------------------------------------
+
+function showAlarm() {
+
+    const card =
+        document.getElementById("statusCard");
+
+    card.className = "status alarm";
+
+    document.getElementById(
+        "statusIcon"
+    ).textContent = "🔴";
+
+    document.getElementById(
+        "statusTitle"
+    ).textContent = "TEMPERATURE ALERT!";
+
+    document.getElementById(
+        "statusMessage"
+    ).textContent =
+        "Temperature exceeded the limit!";
+
+    document.getElementById(
+        "buzzerStatus"
+    ).textContent = "ON";
+}
+
+
+// ------------------------------------
+// SET TEMPERATURE LIMIT
+// ------------------------------------
+
+document
+    .getElementById("setLimitButton")
+    .addEventListener("click", setTemperatureLimit);
+
+
+async function setTemperatureLimit() {
+
+    const input =
+        document.getElementById(
+            "limitInput"
         );
 
+    const limit =
+        parseFloat(input.value);
+
+    if (isNaN(limit)) {
+
+        alert("Please enter a valid temperature.");
+
+        return;
     }
 
+    currentLimit = limit;
+
+    document.getElementById(
+        "limitStatus"
+    ).textContent =
+        "Sending limit: " +
+        limit +
+        "°C";
+
+    // Send command to ESP32
+    if (writer) {
+
+        const command =
+            "LIMIT:" +
+            limit +
+            "\n";
+
+        const encoder =
+            new TextEncoder();
+
+        await writer.write(
+            encoder.encode(command)
+        );
+
+        console.log(
+            "Sent:",
+            command
+        );
+
+    } else {
+
+        alert(
+            "Please connect the ESP32 first."
+        );
+    }
 }
 
 
-// Disconnect ESP32
+// ------------------------------------
+// CONNECTION STATUS
+// ------------------------------------
 
-async function disconnectESP32() {
+function updateConnection(connected) {
 
-    keepReading = false;
+    const dot =
+        document.getElementById(
+            "connectionDot"
+        );
 
+    const text =
+        document.getElementById(
+            "connectionText"
+        );
 
-    try {
+    if (connected) {
 
-        if (reader) {
+        dot.style.background =
+            "#22c55e";
 
-            await reader.cancel();
+        text.textContent =
+            "ESP32 Connected";
 
-        }
+    } else {
 
+        dot.style.background =
+            "#888";
 
-        if (port) {
-
-            await port.close();
-
-        }
-
+        text.textContent =
+            "Not Connected";
     }
-
-    catch (error) {
-
-        console.error(error);
-
-    }
-
-
-    port = null;
-
-    reader = null;
-
-
-    connectBtn.disabled = false;
-
-    disconnectBtn.disabled = true;
-
-
-    setStatus(
-        "Disconnected",
-        false
-    );
-
-}
-
-
-// Button actions
-
-connectBtn.addEventListener(
-    "click",
-    connectESP32
-);
-
-
-disconnectBtn.addEventListener(
-    "click",
-    disconnectESP32
-);
-
-
-// Browser compatibility
-
-if (!("serial" in navigator)) {
-
-    setStatus(
-        "Use Chrome or Edge",
-        false
-    );
-
 }
