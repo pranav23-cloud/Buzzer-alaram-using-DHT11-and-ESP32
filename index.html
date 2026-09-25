@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>ESP32 Sensor Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>ESP32 Sensor Dashboard</h1>
+
+        <p class="subtitle">
+            USB Serial • No Wi-Fi • No IP Address
+        </p>
+
+        <div class="buttons">
+
+            <button id="connectBtn">
+                Connect ESP32
+            </button>
+
+            <button id="disconnectBtn" disabled>
+                Disconnect
+            </button>
+
+        </div>
+
+        <div class="status">
+
+            <span id="statusDot"></span>
+
+            <span id="statusText">
+                Disconnected
+            </span>
+
+        </div>
+
+        <div class="cards">
+
+            <!-- Temperature -->
+
+            <div class="card">
+
+                <h2>Temperature</h2>
+
+                <div class="value">
+
+                    <span id="temperature">
+                        --
+                    </span>
+
+                    °C
+
+                </div>
+
+            </div>
+
+
+            <!-- Humidity -->
+
+            <div class="card">
+
+                <h2>Humidity</h2>
+
+                <div class="value">
+
+                    <span id="humidity">
+                        --
+                    </span>
+
+                    %
+
+                </div>
+
+            </div>
+
+
+            <!-- Distance -->
+
+            <div class="card">
+
+                <h2>Distance</h2>
+
+                <div class="value">
+
+                    <span id="distance">
+                        --
+                    </span>
+
+                    cm
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <p class="update">
+
+            Last update:
+
+            <span id="lastUpdate">
+                --
+            </span>
+
+        </p>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

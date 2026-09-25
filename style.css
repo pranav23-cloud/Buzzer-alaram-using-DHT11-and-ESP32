@@ -1,0 +1,170 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+
+    margin: 0;
+
+    font-family: Arial, sans-serif;
+
+    background: #f4f6f8;
+
+    color: #222;
+}
+
+
+.container {
+
+    max-width: 900px;
+
+    margin: 60px auto;
+
+    padding: 20px;
+
+    text-align: center;
+}
+
+
+h1 {
+
+    margin-bottom: 8px;
+}
+
+
+.subtitle {
+
+    color: #666;
+
+    margin-bottom: 30px;
+}
+
+
+.buttons {
+
+    margin-bottom: 20px;
+}
+
+
+button {
+
+    padding: 12px 20px;
+
+    margin: 5px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    font-size: 16px;
+}
+
+
+#connectBtn {
+
+    background: #222;
+
+    color: white;
+}
+
+
+#disconnectBtn {
+
+    background: #ddd;
+}
+
+
+button:disabled {
+
+    opacity: 0.5;
+
+    cursor: not-allowed;
+}
+
+
+.status {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-bottom: 30px;
+
+    font-weight: bold;
+}
+
+
+#statusDot {
+
+    width: 12px;
+
+    height: 12px;
+
+    border-radius: 50%;
+
+    background: gray;
+}
+
+
+.cards {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 20px;
+}
+
+
+.card {
+
+    background: white;
+
+    padding: 30px 15px;
+
+    border-radius: 14px;
+
+    box-shadow:
+        0 4px 15px
+        rgba(0, 0, 0, 0.08);
+}
+
+
+.card h2 {
+
+    font-size: 18px;
+
+    color: #666;
+}
+
+
+.value {
+
+    font-size: 34px;
+
+    font-weight: bold;
+}
+
+
+.update {
+
+    margin-top: 25px;
+
+    color: #666;
+}
+
+
+@media (max-width: 700px) {
+
+    .cards {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}
